@@ -20,7 +20,6 @@ exports.registerHandle = async (req, res) => {
         // Check if the user already exists
         let user = await User.findOne({ email });
         if (user) {
-            const email = emailService.sendEmailVerification(user)
             return res.status(400).json({ error: 'User already exists' });
         }
 
@@ -33,7 +32,8 @@ exports.registerHandle = async (req, res) => {
 
         // Save the user to the database
         const userData = await user.save();
-
+        //verification Email
+        emailService.sendEmailVerification(user)
         // Send a success response
         res.status(201).json({
             message: 'User registration successful',
