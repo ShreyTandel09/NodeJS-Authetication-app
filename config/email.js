@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 
 function sendEmailVerification(user) {
-    const token = generateVerificationToken(user);
+    const token = generateToken(user, emailToken = true);
 
     console.log("TOKEN in EMAIL");
     console.log(token);
@@ -51,14 +51,19 @@ function getVerificationEmailHTML(user, token) {
     `;
 }
 
-function generateVerificationToken(user) {
+function generateToken(user, emailToken) {
+    const options = {};
 
     const payload = {
         email: user.email,
         name: user.name,
         uniqueKey: process.env.UNIQUE_KEY
     };
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    if (emailToken) {
+        options.expiresIn = '1h';
+    }
+    return jwt.sign(payload, process.env.JWT_SECRET, options);
+
 }
 
 
@@ -66,3 +71,4 @@ function generateVerificationToken(user) {
 
 
 exports.sendEmailVerification = sendEmailVerification;
+exports.generateToken = generateToken;

@@ -20,7 +20,6 @@ exports.registerHandle = async (req, res) => {
         // Check if the user already exists
         let user = await User.findOne({ email });
         if (user) {
-            const email = emailService.sendEmailVerification(user)
             return res.status(400).json({ error: 'User already exists' });
         }
 
@@ -33,7 +32,8 @@ exports.registerHandle = async (req, res) => {
 
         // Save the user to the database
         const userData = await user.save();
-
+        //verification Email
+        emailService.sendEmailVerification(user)
         // Send a success response
         res.status(201).json({
             message: 'User registration successful',
@@ -50,7 +50,7 @@ exports.registerHandle = async (req, res) => {
 exports.verifyEmail = async (req, res) => {
     const { token } = req.query;
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    const { name, email } = decodedToken;
+    const { email } = decodedToken;
 
     try {
         let user = await User.findOne({ email });
@@ -68,9 +68,44 @@ exports.verifyEmail = async (req, res) => {
     }
 }
 
-// Helper function to get a User
-async function getUser(id) {
-    return await User.findById(id);
+
+exports.loginHandle = async (req, res) => {
+
+    const { email, password } = req.body;
+    const { error } = validateLoginUser(req.body);
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) {
+        return res.status(400).json({ error: 'Please Register!!' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+        return res.status(400).json({ error: 'Invalid password!' });
+    }
+
+    const token = emailService.generateToken(user)
+
+    res.status(201).json({
+        message: 'User login successful',
+        user: user,
+        token: token
+    });
+
+}
+
+
+// Function to validate user Login input
+function validateLoginUser(user) {
+    const schema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().min(6).required(),
+    });
+
+    return schema.validate(user);
 }
 
 
