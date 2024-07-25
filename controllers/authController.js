@@ -198,3 +198,23 @@ exports.resetPassword = async (req, res) => {
 
 
 
+exports.getUserProfileInfo = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return { error: 'User not found' };
+        }
+        res.status(200).json({
+            message: 'User Data!!',
+            user: user
+        })
+    } catch (error) {
+        console.error(error.message);
+        return { error: 'Server error' };
+    }
+};
+
+
+
+

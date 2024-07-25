@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
 
+const { isAuthenticated } = require('../middleware/authicate');
+
+
 const app = express();
 
 // Body parser middleware
@@ -24,6 +27,9 @@ router.post('/refresh-token', authController.refreshTokenHandle);
 //forget-password
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
+
+//profile with the Middleware
+router.get('/profile', isAuthenticated, authController.getUserProfileInfo);
 
 
 
