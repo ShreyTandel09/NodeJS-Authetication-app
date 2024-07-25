@@ -8,6 +8,7 @@ const User = require('../models/Users');
 const RefreshToken = require('../models/RefreshToken');
 const { generateToken, generateRefreshToken } = require('../utils/JWTtoken');
 const { validateUser, validateLoginUser } = require('../validation/userValidation');
+const passport = require('passport');
 
 
 
@@ -73,7 +74,47 @@ exports.verifyEmail = async (req, res) => {
 }
 
 
-exports.loginHandle = async (req, res) => {
+// exports.loginHandle = async (req, res) => {
+
+//     try {
+//         const { email, password } = req.body;
+//         const { error } = validateLoginUser(req.body);
+//         if (error) {
+//             return res.status(400).json({ error: error.details[0].message });
+//         }
+
+//         let user = await User.findOne({ email });
+//         if (!user) {
+//             return res.status(400).json({ error: 'Please Register!!' });
+//         }
+
+//         const validPassword = await bcrypt.compare(password, user.password);
+//         if (!validPassword) {
+//             return res.status(400).json({ error: 'Invalid password!' });
+//         }
+
+//         if (!user.isVerified) {
+//             return res.status(400).json({ error: 'Please verify your email!' });
+//         }
+//         //token and refresh token
+//         const token = generateToken(user)
+//         const refreshToken = generateRefreshToken(user)
+//         await new RefreshToken({ token: refreshToken, userId: user._id }).save();
+//         res.status(200).json({
+//             message: 'User login successful',
+//             user: user,
+//             token: token,
+//             refreshToken: refreshToken
+//         });
+//     } catch (error) {
+//         console.error(error.message);
+//         res.status(500).json({ error: 'Server error' });
+//     }
+
+// }
+
+
+exports.loginHandle = async (req, res, next) => {
 
     try {
         const { email, password } = req.body;
@@ -95,24 +136,23 @@ exports.loginHandle = async (req, res) => {
         if (!user.isVerified) {
             return res.status(400).json({ error: 'Please verify your email!' });
         }
-        //token and refresh token
-        const token = generateToken(user)
-        const refreshToken = generateRefreshToken(user)
-        await new RefreshToken({ token: refreshToken, userId: user._id }).save();
-        res.status(200).json({
-            message: 'User login successful',
-            user: user,
-            token: token,
-            refreshToken: refreshToken
+
+
+        req.logIn(user, err => {
+            if (err) return next(err);
+            return res.status(200).json({ message: 'User login successful', user });
         });
+
+
+
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ error: 'Server error' });
     }
 
-
-
 }
+
+
 
 
 
@@ -190,6 +230,19 @@ exports.resetPassword = async (req, res) => {
         await user.save();
 
         res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+}
+
+exports.getUserProfileInfo = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(400).json({ error: 'User not found' });
+        }
+        res.status(200).json({ user });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ error: 'Server error' });

@@ -4,6 +4,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const path = require('path')
+const session = require('express-session');
+
 
 const authRoutes = require('./routes/auth');
 
@@ -28,6 +30,16 @@ mongoose.connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(session({
+    secret: 'test_123',
+    resave: false,
+    saveUninitialized: true
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+require('./utils/passport')(passport);
 // app.use('/', require('./routes/index'));
 app.use('/auth', authRoutes);
 
