@@ -73,64 +73,126 @@ exports.verifyEmail = async (req, res) => {
 
 exports.loginHandle = async (req, res) => {
 
-    const { email, password } = req.body;
-    const { error } = validateLoginUser(req.body);
-    if (error) {
-        return res.status(400).json({ error: error.details[0].message });
+    try {
+        const { email, password } = req.body;
+        const { error } = validateLoginUser(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'Please Register!!' });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(400).json({ error: 'Invalid password!' });
+        }
+
+        if (!user.isVerified) {
+            return res.status(400).json({ error: 'Please verify your email!' });
+        }
+        //token and refresh token
+        const token = emailService.generateToken(user)
+        const refreshToken = emailService.generateRefreshToken(user)
+        await new RefreshToken({ token: refreshToken, userId: user._id }).save();
+        res.status(200).json({
+            message: 'User login successful',
+            user: user,
+            token: token,
+            refreshToken: refreshToken
+        });
+    } catch (error) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error' });
     }
 
-    let user = await User.findOne({ email });
-    if (!user) {
-        return res.status(400).json({ error: 'Please Register!!' });
-    }
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-        return res.status(400).json({ error: 'Invalid password!' });
-    }
-    //token and refresh token
-    const token = emailService.generateToken(user)
-    const refreshToken = emailService.generateRefreshToken(user)
-    await new RefreshToken({ token: refreshToken, userId: user._id }).save();
-    res.status(200).json({
-        message: 'User login successful',
-        user: user,
-        token: token,
-        refreshToken: refreshToken
-    });
 
 }
 
 
 
-exports.refreshTokenHandle = (async (req, res) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-        return res.status(401).json({ error: 'Refresh token is required' });
+exports.refreshTokenHandle = async (req, res) => {
+
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token is required' });
+        }
+
+        const refreshTokenDoc = await RefreshToken.findOne({ token: refreshToken });
+        if (!refreshTokenDoc) {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
+
+        const user = await User.findById(refreshTokenDoc.userId);
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        const newAccessToken = emailService.generateToken(user);
+        // res.status(200).json({ token: newAccessToken });
+
+        res.status(200).json({
+            message: 'New token Generated',
+            user: user,
+            token: newAccessToken,
+            refreshToken: refreshToken
+        })
+    } catch (error) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error' });
     }
 
-    const refreshTokenDoc = await RefreshToken.findOne({ token: refreshToken });
-    if (!refreshTokenDoc) {
-        return res.status(401).json({ error: 'Invalid refresh token' });
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+
+        const { email } = req.body;
+        if (!email) {
+            return res.status(401).json({ error: 'Email is Required' });
+        }
+        let user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'User with Email ID does not exist!!' });
+        }
+
+        //verification Email
+        emailService.sendRestEmail(user)
+        res.status(201).json({
+            message: 'Password reset email sent',
+        });
+    } catch (error) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error' });
     }
 
-    const user = await User.findById(refreshTokenDoc.userId);
-    if (!user) {
-        return res.status(401).json({ error: 'User not found' });
+}
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        const { email } = decodedToken;
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        await user.save();
+
+        res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    const newAccessToken = emailService.generateToken(user);
-    // res.status(200).json({ token: newAccessToken });
-
-    res.status(200).json({
-        message: 'New token Generated',
-        user: user,
-        token: newAccessToken,
-        refreshToken: refreshToken
-    })
-});
-
-
+}
 
 // Function to validate user Login input
 function validateLoginUser(user) {
