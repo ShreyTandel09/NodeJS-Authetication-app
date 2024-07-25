@@ -6,8 +6,6 @@ const jwt = require('jsonwebtoken');
 function sendEmailVerification(user) {
     const token = generateToken(user, emailToken = true);
 
-    console.log("TOKEN in EMAIL");
-    console.log(token);
     const html = getVerificationEmailHTML(user, token);
     // Create a transporter object using the default SMTP transport
     let transporter = nodemailer.createTransport({
@@ -67,8 +65,24 @@ function generateToken(user, emailToken) {
 }
 
 
+function generateRefreshToken(user) {
+    const options = {};
+
+    const payload = {
+        email: user.email,
+        name: user.name,
+        uniqueKey: process.env.UNIQUE_KEY
+    };
+
+    return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+
+}
+
+
+
 
 
 
 exports.sendEmailVerification = sendEmailVerification;
 exports.generateToken = generateToken;
+exports.generateRefreshToken = generateRefreshToken;

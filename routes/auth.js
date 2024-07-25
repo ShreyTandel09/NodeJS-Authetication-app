@@ -18,6 +18,9 @@ router.post('/register', authController.registerHandle);
 router.get('/verify-email', authController.verifyEmail);
 //login 
 router.post('/login', authController.loginHandle);
+//refresh-token
+router.post('/refresh-token', authController.refreshTokenHandle);
+
 
 
 

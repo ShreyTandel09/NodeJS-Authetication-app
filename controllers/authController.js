@@ -1,10 +1,12 @@
 const Joi = require('joi');
 const express = require('express');
 const router = express.Router();
-const User = require('../models/Users');
 const bcrypt = require('bcryptjs');
 const emailService = require('../config/email')
 const jwt = require('jsonwebtoken');
+const User = require('../models/Users');
+const RefreshToken = require('../models/RefreshToken');
+
 
 
 exports.registerHandle = async (req, res) => {
@@ -86,16 +88,48 @@ exports.loginHandle = async (req, res) => {
     if (!validPassword) {
         return res.status(400).json({ error: 'Invalid password!' });
     }
-
+    //token and refresh token
     const token = emailService.generateToken(user)
-
-    res.status(201).json({
+    const refreshToken = emailService.generateRefreshToken(user)
+    await new RefreshToken({ token: refreshToken, userId: user._id }).save();
+    res.status(200).json({
         message: 'User login successful',
         user: user,
-        token: token
+        token: token,
+        refreshToken: refreshToken
     });
 
 }
+
+
+
+exports.refreshTokenHandle = (async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(401).json({ error: 'Refresh token is required' });
+    }
+
+    const refreshTokenDoc = await RefreshToken.findOne({ token: refreshToken });
+    if (!refreshTokenDoc) {
+        return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
+    const user = await User.findById(refreshTokenDoc.userId);
+    if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+    }
+
+    const newAccessToken = emailService.generateToken(user);
+    // res.status(200).json({ token: newAccessToken });
+
+    res.status(200).json({
+        message: 'New token Generated',
+        user: user,
+        token: newAccessToken,
+        refreshToken: refreshToken
+    })
+});
+
 
 
 // Function to validate user Login input
