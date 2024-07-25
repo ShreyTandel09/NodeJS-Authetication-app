@@ -1,10 +1,11 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
-const jwt = require('jsonwebtoken');
+const jwtToken = require('./JWTtoken');
+
 
 
 function sendEmailVerification(user) {
-    const token = generateToken(user, emailToken = true);
+    const token = jwtToken.generateToken(user, emailToken = true);
 
     const html = getVerificationEmailHTML(user, token);
     // Create a transporter object using the default SMTP transport
@@ -38,7 +39,7 @@ function sendEmailVerification(user) {
 
 
 function sendRestEmail(user) {
-    const token = generateToken(user, emailToken = true);
+    const token = jwtToken.generateToken(user, emailToken = true);
 
     const html = getRestEmailHTML(user, token);
     // Create a transporter object using the default SMTP transport
@@ -96,41 +97,5 @@ function getRestEmailHTML(user, token) {
     `;
 }
 
-function generateToken(user, emailToken) {
-    const options = {};
-
-    const payload = {
-        email: user.email,
-        name: user.name,
-        uniqueKey: process.env.UNIQUE_KEY
-    };
-    if (emailToken) {
-        options.expiresIn = '1h';
-    }
-    return jwt.sign(payload, process.env.JWT_SECRET, options);
-
-}
-
-
-function generateRefreshToken(user) {
-    const options = {};
-
-    const payload = {
-        email: user.email,
-        name: user.name,
-        uniqueKey: process.env.UNIQUE_KEY
-    };
-
-    return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-
-}
-
-
-
-
-
-
 exports.sendEmailVerification = sendEmailVerification;
-exports.generateToken = generateToken;
-exports.generateRefreshToken = generateRefreshToken;
 exports.sendRestEmail = sendRestEmail;

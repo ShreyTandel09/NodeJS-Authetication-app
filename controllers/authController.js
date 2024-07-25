@@ -1,11 +1,13 @@
-const Joi = require('joi');
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const emailService = require('../config/email')
+const emailService = require('../utils/email')
+const jwtToken = require('../utils/JWTtoken')
 const jwt = require('jsonwebtoken');
 const User = require('../models/Users');
 const RefreshToken = require('../models/RefreshToken');
+const { generateToken, generateRefreshToken } = require('../utils/JWTtoken');
+const { validateUser, validateLoginUser } = require('../validation/userValidation');
 
 
 
@@ -94,8 +96,8 @@ exports.loginHandle = async (req, res) => {
             return res.status(400).json({ error: 'Please verify your email!' });
         }
         //token and refresh token
-        const token = emailService.generateToken(user)
-        const refreshToken = emailService.generateRefreshToken(user)
+        const token = generateToken(user)
+        const refreshToken = generateRefreshToken(user)
         await new RefreshToken({ token: refreshToken, userId: user._id }).save();
         res.status(200).json({
             message: 'User login successful',
@@ -104,7 +106,7 @@ exports.loginHandle = async (req, res) => {
             refreshToken: refreshToken
         });
     } catch (error) {
-        console.error(err.message);
+        console.error(error.message);
         res.status(500).json({ error: 'Server error' });
     }
 
@@ -132,7 +134,7 @@ exports.refreshTokenHandle = async (req, res) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        const newAccessToken = emailService.generateToken(user);
+        const newAccessToken = generateToken(user);
         // res.status(200).json({ token: newAccessToken });
 
         res.status(200).json({
@@ -194,28 +196,5 @@ exports.resetPassword = async (req, res) => {
     }
 }
 
-// Function to validate user Login input
-function validateLoginUser(user) {
-    const schema = Joi.object({
-        email: Joi.string().email().required(),
-        password: Joi.string().min(6).required(),
-    });
 
-    return schema.validate(user);
-}
-
-
-// Function to validate user input
-function validateUser(user) {
-    const schema = Joi.object({
-        name: Joi.string().min(3).required(),
-        email: Joi.string().email().required(),
-        password: Joi.string().min(6).required(),
-        confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
-            'any.only': 'Confirm Password must match the Password'
-        })
-    });
-
-    return schema.validate(user);
-}
 
