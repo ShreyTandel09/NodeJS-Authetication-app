@@ -6,6 +6,7 @@ function generateToken(user, emailToken) {
     const options = {};
 
     const payload = {
+        id: user._id.toString(),
         email: user.email,
         name: user.name,
         uniqueKey: process.env.UNIQUE_KEY
