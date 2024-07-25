@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const path = require('path')
 
+const authRoutes = require('./routes/auth');
+
 
 
 const app = express();
@@ -27,7 +29,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // app.use('/', require('./routes/index'));
-app.use('/auth', require('./routes/auth'));
+app.use('/auth', authRoutes);
 
 
 const PORT = process.env.PORT || 3000;
